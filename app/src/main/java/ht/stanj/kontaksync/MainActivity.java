@@ -10,6 +10,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,9 +19,22 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -87,25 +101,57 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    public void saveData(){
+    public void saveToServer(){
 
-        DBHelper dbHelper = new DBHelper(getApplicationContext());
-        SQLiteDatabase database = dbHelper.getWritableDatabase();
-
-        Contact contact = new Contact(0,name.getText().toString(),phone.getText().toString(),false);
+        final Contact contact = new Contact(0,name.getText().toString(),phone.getText().toString(),false);
 
         if(checkNetwork()){
 
+            RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+
+
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, "http://gestionah.com/api/contact/create", new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    Log.d("DATA",response.toString());
+//                    try {
+//                        JSONObject jsonObject = new JSONObject(response);
+//                        String data = jsonObject.getString("data");
+//                        Log.d("DATA",data);
+//                        Toast.makeText(getApplicationContext(),"Tes",Toast.LENGTH_SHORT).show();
+//                    } catch (JSONException e) {
+//                        e.printStackTrace();
+//                        Toast.makeText(getApplicationContext(),"Err String",Toast.LENGTH_SHORT).show();
+//
+//                    }
+                    Toast.makeText(getApplicationContext(),"Response",Toast.LENGTH_SHORT).show();
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Toast.makeText(getApplicationContext(),"Error Saved",Toast.LENGTH_SHORT).show();
+                }
+            }){
+                @Override
+                protected Map<String, String> getParams() throws AuthFailureError {
+                    Map<String,String> params = new HashMap<>();
+                    params.put("name",contact.getName());
+                    params.put("phone",contact.getPhone());
+                    Log.d("DATA_PARAM",params.toString());
+                    return super.getParams();
+                }
+            };
+            queue.add(stringRequest);
         }else{
-            dbHelper.save(database,contact);
+            saveLocal(contact);
         }
 
         loadData();
-        database.close();
-        dbHelper.close();
+
         dialog.dismiss();
 
-        Toast.makeText(getApplicationContext(),"Saved !",Toast.LENGTH_SHORT).show();
+//        Toast.makeText(getApplicationContext(),"Saved !",Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -116,8 +162,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 dialog();
             break;
             case R.id.save:
-                saveData();
+                saveToServer();
                 break;
         }
+    }
+
+    public void saveLocal(Contact contact){
+
+        DBHelper dbHelper = new DBHelper(getApplicationContext());
+        SQLiteDatabase database = dbHelper.getWritableDatabase();
+
+        dbHelper.save(database,contact);
+
+        database.close();
+        dbHelper.close();
     }
 }
