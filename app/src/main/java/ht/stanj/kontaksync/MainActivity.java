@@ -99,6 +99,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         for (Contact contact:db.getAll()) {
             data.add(contact);
         }
+        adapter.notifyDataSetChanged();
     }
 
     public void saveToServer(){
@@ -106,52 +107,48 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final Contact contact = new Contact(0,name.getText().toString(),phone.getText().toString(),false);
 
         if(checkNetwork()){
+            RequestQueue queue = Volley.newRequestQueue(this);
 
-            RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-
-
-            StringRequest stringRequest = new StringRequest(Request.Method.POST, "http://gestionah.com/api/contact/create", new Response.Listener<String>() {
+            StringRequest request = new StringRequest(Request.Method.POST, DBContact.SERVER_URL+"/create", new Response.Listener<String>() {
                 @Override
                 public void onResponse(String response) {
                     Log.d("DATA",response.toString());
-//                    try {
-//                        JSONObject jsonObject = new JSONObject(response);
-//                        String data = jsonObject.getString("data");
-//                        Log.d("DATA",data);
-//                        Toast.makeText(getApplicationContext(),"Tes",Toast.LENGTH_SHORT).show();
-//                    } catch (JSONException e) {
-//                        e.printStackTrace();
-//                        Toast.makeText(getApplicationContext(),"Err String",Toast.LENGTH_SHORT).show();
-//
-//                    }
-                    Toast.makeText(getApplicationContext(),"Response",Toast.LENGTH_SHORT).show();
-
+                    try {
+                        JSONObject object = new JSONObject(response);
+//                        Toast.makeText(getApplicationContext(),object.get("message").toString(),Toast.LENGTH_SHORT).show();
+                        if(object.getBoolean("success")){
+                            contact.setStatus(true);
+                            saveLocal(contact);
+                        }
+                    } catch (JSONException e) {
+                        Log.d("DATA_ERR",e.getMessage());
+                    }
                 }
             }, new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError error) {
-                    Toast.makeText(getApplicationContext(),"Error Saved",Toast.LENGTH_SHORT).show();
+                    Log.d("DATA_ERR",error.getMessage());
+                    saveLocal(contact);
                 }
             }){
                 @Override
-                protected Map<String, String> getParams() throws AuthFailureError {
-                    Map<String,String> params = new HashMap<>();
-                    params.put("name",contact.getName());
-                    params.put("phone",contact.getPhone());
-                    Log.d("DATA_PARAM",params.toString());
-                    return super.getParams();
+                protected Map<String, String> getParams()
+                {
+                    Map<String, String>  params = new HashMap<String, String>();
+                    params.put("name", contact.getName());
+                    params.put("phone", contact.getPhone());
+
+                    return params;
                 }
             };
-            queue.add(stringRequest);
+            queue.add(request);
         }else{
             saveLocal(contact);
         }
 
-        loadData();
-
         dialog.dismiss();
 
-//        Toast.makeText(getApplicationContext(),"Saved !",Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(),"Saved !",Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -176,5 +173,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         database.close();
         dbHelper.close();
+
+        loadData();
     }
 }
