@@ -66,11 +66,9 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public void update(SQLiteDatabase db,Contact contact){
 
-        ContentValues values = new ContentValues();
-        values.put(DBContact.NAME,contact.getName());
-        values.put(DBContact.PHONE,contact.getPhone());
-        values.put(DBContact.STATUS,contact.isStatus()?DBContact.SYNC_STATUS_OK:DBContact.SYNC_STATUS_FAILED);
+        String sql = "update "+DBContact.TABLE_NAME+" set name='"+contact.getName()+"',phone='"+contact.getPhone()+"'," +
+                "status="+(contact.isStatus()==true?1:0)+" where id="+contact.getId()+"";
 
-        db.update(DBContact.TABLE_NAME,values,DBContact.ID,null);
+        db.execSQL(sql);
     }
 }

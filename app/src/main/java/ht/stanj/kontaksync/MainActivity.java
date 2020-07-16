@@ -4,7 +4,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.ConnectivityManager;
@@ -50,6 +53,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     Dialog dialog;
 
+    BroadcastReceiver receiver ;
+
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
@@ -69,6 +74,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         saveButton.setOnClickListener(this);
 
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                loadData();
+            }
+        };
+
+        dialog.dismiss();
     }
 
     public boolean checkNetwork(){
@@ -98,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         DBHelper db = new DBHelper(this);
         for (Contact contact:db.getAll()) {
             data.add(contact);
+            Log.d("LOAD",""+contact.isStatus());
         }
         adapter.notifyDataSetChanged();
     }
@@ -171,9 +185,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         dbHelper.save(database,contact);
 
+        loadData();
+
         database.close();
         dbHelper.close();
 
-        loadData();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerReceiver(receiver,new IntentFilter(DBContact.UI_UPDATE));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(receiver);
     }
 }
